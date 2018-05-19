@@ -15,3 +15,9 @@ for i in showprogress(range(10)):
     sleep(0.1)
 ```
 
+# Install
+Conda and pip packages are yet to come. Currently you can use:  
+`pip install git+https://github.com/evfro/showprogress.git`
+
+# Requirements
+Python 3.5+, IPython v.5.6+
