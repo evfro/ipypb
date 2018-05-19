@@ -1,1 +1,1 @@
-from showprogress.progressbar import StyledProgressBar as showprogress
+from showprogress.progressbar import ConfigurableProgressBar as showprogress

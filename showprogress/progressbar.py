@@ -17,8 +17,8 @@ def exec_time(stop_time_last=[0]):
     return elapsed_time
 
 
-class StyledProgressBar(ProgressBar):
-    def __init__(self, iterable, total=None):
+class ConfigurableProgressBar(ProgressBar):
+    def __init__(self, iterable, total=None, keep=True, text=None):
         try:
             size = len(iterable)
         except TypeError:
