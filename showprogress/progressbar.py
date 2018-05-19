@@ -58,7 +58,7 @@ class StyledProgressBar(ProgressBar):
         
         self.progress += 1 # updates display as well
         if self.progress < self.total:
-            return progress
+            return self.progress
         else:
 
             raise StopIteration()    
