@@ -22,7 +22,7 @@ class ConfigurableProgressBar(ProgressBar):
         try:
             size = len(iterable)
         except TypeError:
-            msg = 'Please provide the `total` argument for total number of iterations.'
+            msg = 'Please provide the `total` argument for the total number of iterations.'
             assert isinstance(total, int), msg
             size = total
         super().__init__(size)
@@ -49,11 +49,11 @@ class ConfigurableProgressBar(ProgressBar):
         return f'<div>{self.bar_html()}</div>'.format(**config)
     
     def __next__(self):
-        """Returns current value and increments display by one."""
+        """Returns current value and time; increments display by one."""
         progress = self._progress
         if progress == -1:
             self.exec_time = exec_time()
-            self.exec_time(timer()); # flush time counter
+            self.exec_time(timer()); # flush timer for reuse
         else:        
             timings = self.exec_time()
             self.time_stats = timings + (timings[1] / (progress+1),)
@@ -62,5 +62,4 @@ class ConfigurableProgressBar(ProgressBar):
         if self.progress < self.total:
             return self.progress
         else:
-
-            raise StopIteration()    
+            raise StopIteration()
