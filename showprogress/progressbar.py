@@ -1,11 +1,10 @@
 from timeit import default_timer as timer
 from IPython.display import ProgressBar
 
-PBFORMAT = '''<progress style=width:"{width}" max="{total}" value="{value}" class="Progress-main">
-              </progress>
-              <span class="Progress-label"><strong>{complete:.0f}%</strong></span>
-              <span class="Iteration-label">{step}/{total}</span>
-              <span class="Time-label">[{time[0]:.2f}<{time[1]:.2f}, {time[2]:.2f}s/it]</span>'''
+PBFORMAT = ['<progress style=width:"{width}" max="{total}" value="{value}" class="Progress-main"/></progress>',
+            '<span class="Progress-label"><strong>{complete:.0f}%</strong></span>',
+            '<span class="Iteration-label">{step}/{total}</span>',
+            '<span class="Time-label">[{time[0]:.2f}<{time[1]:.2f}, {time[2]:.2f}s/it]</span>']
 
 
 def exec_time(stop_time_last=[0]):
@@ -27,11 +26,14 @@ class StyledProgressBar(ProgressBar):
             assert isinstance(total, int), msg
             size = total
         super().__init__(size)
-        self._bar = f'<div>{PBFORMAT}</div>'
         self.step = (size // 100) or 1
         self.step_progress = 0
         self.time_progress = (0,)*3
         self.exec_time = None
+        self.pbformat = PBFORMAT
+        
+    def bar_html(self):
+        return "\n".join(self.pbformat)
 
     def _repr_html_(self):
         perc_complete = 100 * (self.progress/self.total)
@@ -44,7 +46,7 @@ class StyledProgressBar(ProgressBar):
                       complete=perc_complete,
                       step=self.step_progress,
                       time=self.time_progress)
-        return self._bar.format(**config)
+        return f'<div>{self.bar_html()}</div>'.format(**config)
     
     def __next__(self):
         """Returns current value and increments display by one."""
