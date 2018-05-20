@@ -16,16 +16,19 @@ def exec_time():
         start = stop
 
 
+class ProgressBarInputError(ValueError):
+    """Raise on invalid input to progress bar"""
+
+
 class ConfigurableProgressBar(ProgressBar):
-    def __init__(self, iterable, total=None, keep=True, text=None):
+    def __init__(self, iterable=None, total=None, keep=True, text=None):
         try:
-            size = len(iterable)
+            size = total or len(iterable)
         except TypeError:
-            msg = 'Please provide the `total` argument for the total number of iterations.'
-            assert isinstance(total, int), msg
-            size = total
+            raise ProgressBarInputError('Please specify the total number of iterations')
+
         super().__init__(size)
-        self.iterable = iter(iterable)
+        self.iterator = iter(range(size)) if iterable is None else iter(iterable)
         self.step = (size // 100) or 1
         self.step_progress = 0
         self.time_stats = (0,)*3 # iter. time, total time, time per iter.
@@ -58,4 +61,4 @@ class ConfigurableProgressBar(ProgressBar):
             timings = next(self.exec_time)
             self.time_stats = timings + (timings[1] / (progress+1),)
         super().__next__(); # updates display as well
-        return next(self.iterable)
+        return next(self.iterator)
