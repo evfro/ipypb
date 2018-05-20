@@ -7,14 +7,13 @@ PBFORMAT = ['<progress style=width:"{width}" max="{total}" value="{value}" class
             '<span class="Time-label">[{time[0]:.2f}<{time[1]:.2f}, {time[2]:.2f}s/it]</span>']
 
 
-def exec_time(stop_time_last=[0]):
-    def elapsed_time(start_time=timer()):
-        stop_time = timer()
-        elapsed_total = stop_time - start_time
-        elapsed = stop_time - stop_time_last[0]
-        stop_time_last[0] = stop_time
-        return elapsed, elapsed_total
-    return elapsed_time
+def exec_time():
+    start0 = start = timer()
+    yield
+    while True:
+        stop = timer()
+        yield (stop-start, stop-start0)
+        start = stop
 
 
 class ConfigurableProgressBar(ProgressBar):
@@ -54,9 +53,9 @@ class ConfigurableProgressBar(ProgressBar):
         progress = self._progress
         if progress == -1:
             self.exec_time = exec_time()
-            self.exec_time(timer()); # flush timer for reuse
+            self.exec_time.send(None) # prime timer
         else:
-            timings = self.exec_time()
+            timings = next(self.exec_time)
             self.time_stats = timings + (timings[1] / (progress+1),)
         super().__next__(); # updates display as well
         return next(self.iterable)
