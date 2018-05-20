@@ -63,5 +63,10 @@ class ConfigurableProgressBar(ProgressBar):
         else:
             timings = next(self.exec_time)
             self.time_stats = timings + (timings[1] / (progress+1),)
-        super().__next__(); # updates display as well
+        try:
+            super().__next__(); # updates display as well
+        except StopIteration as e: # handle incompatible iterator length
+            if self.iterator.__length_hint__() > 0:
+                print('Input sequence is not exhausted.')
+                raise e
         return next(self.iterator)
