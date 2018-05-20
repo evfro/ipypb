@@ -25,7 +25,10 @@ class ConfigurableProgressBar(ProgressBar):
         try:
             size = total or len(iterable)
         except TypeError:
-            raise ProgressBarInputError('Please specify the total number of iterations')
+            try: # iterable can be an iterator already, try to get its length
+                size = iterable.__length_hint__()
+            except AttributeError:
+                raise ProgressBarInputError('Please specify the total number of iterations')
 
         super().__init__(size)
         self.iterator = iter(range(size)) if iterable is None else iter(iterable)
