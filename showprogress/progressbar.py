@@ -26,12 +26,13 @@ class ConfigurableProgressBar(ProgressBar):
             assert isinstance(total, int), msg
             size = total
         super().__init__(size)
+        self.iterable = iter(iterable)
         self.step = (size // 100) or 1
         self.step_progress = 0
         self.time_stats = (0,)*3 # iter. time, total time, time per iter.
         self.exec_time = None
         self.pbformat = PBFORMAT
-        
+
     def bar_html(self):
         return "\n".join(self.pbformat)
 
@@ -47,19 +48,15 @@ class ConfigurableProgressBar(ProgressBar):
                       step=self.step_progress,
                       time=self.time_stats)
         return f'<div>{self.bar_html()}</div>'.format(**config)
-    
+
     def __next__(self):
         """Returns current value and time; increments display by one."""
         progress = self._progress
         if progress == -1:
             self.exec_time = exec_time()
             self.exec_time(timer()); # flush timer for reuse
-        else:        
+        else:
             timings = self.exec_time()
             self.time_stats = timings + (timings[1] / (progress+1),)
-        
-        self.progress += 1 # updates display as well
-        if self.progress < self.total:
-            return self.progress
-        else:
-            raise StopIteration()
+        super().__next__(); # updates display as well
+        return next(self.iterable)
