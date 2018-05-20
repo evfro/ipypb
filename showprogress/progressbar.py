@@ -1,3 +1,4 @@
+from operator import length_hint
 from timeit import default_timer as timer
 from IPython.display import ProgressBar
 
@@ -21,14 +22,12 @@ class ProgressBarInputError(ValueError):
 
 
 class ConfigurableProgressBar(ProgressBar):
-    def __init__(self, iterable=None, total=None, keep=True, text=None):
-        try:
-            size = total or len(iterable)
-        except TypeError:
-            try: # iterable can be an iterator already, try to get its length
-                size = iterable.__length_hint__()
-            except AttributeError:
-                raise ProgressBarInputError('Please specify the total number of iterations')
+    def __init__(self, iterable=None, total=0, keep=True, text=None):
+        size = total or length_hint(iterable)
+        if size == 0: # unable to determine input sequence length
+            raise ProgressBarInputError('Please specify the total number of iterations')
+        if (size < 0) or not isinstance(size, int):
+            raise ProgressBarInputError('The total number of iterations must be an integer value above 0')
 
         super().__init__(size)
         self.iterator = iter(range(size)) if iterable is None else iter(iterable)
@@ -66,7 +65,7 @@ class ConfigurableProgressBar(ProgressBar):
         try:
             super().__next__(); # updates display as well
         except StopIteration as e: # handle incompatible iterator length
-            if self.iterator.__length_hint__() > 0:
+            if length_hint(self.iterator) > 0:
                 print('Input sequence is not exhausted.')
                 raise e
         return next(self.iterator)
