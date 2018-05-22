@@ -53,8 +53,7 @@ class ConfigurableProgressBar(ProgressBar):
                       time=self.time_stats)
         return f'<div>{self.bar_html()}</div>'.format(**config)
 
-    def __next__(self):
-        """Returns current value and time; increments display by one."""
+    def _check_time(self):
         progress = self._progress
         if progress == -1:
             self.exec_time = exec_time()
@@ -62,8 +61,12 @@ class ConfigurableProgressBar(ProgressBar):
         else:
             timings = next(self.exec_time)
             self.time_stats = timings + (timings[1] / (progress+1),)
+
+    def __next__(self):
+        """Returns current value and time; increments display by one."""
+        self._check_time()
         try:
-            super().__next__(); # updates display as well
+            super().__next__() # updates display as well
         except StopIteration as e: # handle incompatible iterator length
             if length_hint(self.iterator) > 0:
                 print('Input sequence is not exhausted.')
