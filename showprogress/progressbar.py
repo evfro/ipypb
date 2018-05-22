@@ -1,3 +1,4 @@
+from itertools import takewhile
 from operator import length_hint
 from timeit import default_timer as timer
 from IPython.display import ProgressBar
@@ -19,6 +20,9 @@ def exec_time():
 
 class ProgressBarInputError(ValueError):
     """Raise on invalid input to progress bar"""
+
+class InteractiveRangeInputError(ValueError):
+    """Raise on invalid input to interactive range"""
 
 
 class ConfigurableProgressBar(ProgressBar):
@@ -72,3 +76,21 @@ class ConfigurableProgressBar(ProgressBar):
                 print('Input sequence is not exhausted.')
                 raise e
         return next(self.iterator)
+
+
+class InteractiveRange(ConfigurableProgressBar):
+    def __init__(self, low, high=None, step=None, keep=True, text=None):
+        if not isinstance(low, int):
+            raise InteractiveRangeInputError("Input must be an integer value")
+
+        if high is None:
+            # abuse signature for convenience
+            # allow (low, None, None) and even (low, None, step)
+            high = low
+            low = 0
+
+        if low >= high:
+            raise InteractiveRangeInputError("`low` shold be lower than `high`")
+
+        iterable = range(*takewhile(lambda x: x is not None, [low, high, step]))
+        super().__init__(iterable=iterable, total=None, keep=keep, text=text)
