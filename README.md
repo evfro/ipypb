@@ -20,4 +20,4 @@ Conda and pip packages are yet to come. Currently you can use:
 `pip install git+https://github.com/evfro/showprogress.git`
 
 # Requirements
-Python 3.6+, IPython v.5.6+
+Python 3.6+ and IPython v.5.6+ excluding v.6.1 and v.6.2
