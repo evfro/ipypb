@@ -71,10 +71,11 @@ class ConfigurableProgressBar(ProgressBar):
         self._check_time()
         try:
             super().__next__() # updates display as well
-        except StopIteration as e: # handle incompatible iterator length
+        except StopIteration as e:
             if length_hint(self.iterator) > 0:
+                # handle incompatible iterator length
                 print('Input sequence is not exhausted.')
-                raise e
+            raise e
         return next(self.iterator)
 
 
