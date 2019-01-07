@@ -1,7 +1,9 @@
 from itertools import takewhile
+from weakref import WeakSet
 from operator import length_hint
 from timeit import default_timer as timer
 from IPython.display import ProgressBar
+from IPython.core.interactiveshell import InteractiveShell
 
 
 STD_FILL = '█'
@@ -10,6 +12,31 @@ PBFORMAT = ['<progress style=width:"{width}" max="{total}" value="{value}" class
             '<span class="Progress-label"><strong>{complete:.0f}%</strong></span>',
             '<span class="Iteration-label">{step}/{total}</span>',
             '<span class="Time-label">[{time[0]:.2f}<{time[1]:.2f}, {time[2]:.2f}s/it]</span>']
+
+
+def progressbar_formatter(obj, p, cycle):
+    if cycle:
+        p.text(f'{obj.__class__.__name__}(...)')
+    else:
+        # "\033[A" is interpreted by terminal as "move the cursor one line up"
+        # allows to undo the default end='\n' in print function
+        # "\033[B" is interpreted by terminal as "move the cursor one line down"
+        to_last_line = ''
+        if (obj.count_id == 0) and (obj._progress == obj.total):
+            to_last_line = '\033[B' * type(obj)._max_levels
+        moveup = '\033[A' * obj.moveup
+        begin = '\033[2K\r'  # overwrite line, start from the beginning
+        p.text(f'{moveup}{begin}{repr(obj)}{to_last_line}')
+
+
+def patch_progressbar_display(cls):
+    interactive = InteractiveShell.initialized()
+    if interactive: # for ipython terminal
+        frm = InteractiveShell.instance().display_formatter.formatters['text/plain']
+        frm.for_type(cls, progressbar_formatter) # doesn't affect notebooks
+    else: # for pure python in terminal
+        # TODO find a way to patch without invoking ipython instance
+        pass
 
 
 def exec_time():
@@ -29,7 +56,11 @@ class InteractiveRangeInputError(ValueError):
 
 
 class ConfigurableProgressBar(ProgressBar):
-    def __init__(self, iterable=None, total=0, keep=True, text=None):
+    _instances = WeakSet()
+    _depth = 0
+    _max_levels = 0
+
+    def __init__(self, iterable=None, total=0, keep=True, label=None):
         size = total or length_hint(iterable)
         if size == 0: # unable to determine input sequence length
             raise ProgressBarInputError('Please specify the total number of iterations')
@@ -37,12 +68,20 @@ class ConfigurableProgressBar(ProgressBar):
             raise ProgressBarInputError('The total number of iterations must be an integer value above 0')
 
         super().__init__(size)
-        self.iterator = iter(range(size)) if iterable is None else iter(iterable)
+
+        self.iterable = range(size) if iterable is None else iterable
+        self.iterator = None
         self.step = (size // 100) or 1
         self.step_progress = 0
         self.time_stats = (0,)*3 # iter. time, total time, time per iter.
         self.exec_time = None
         self.pbformat = PBFORMAT
+        self.moveup = 0
+
+        self.count_id = len(type(self)._instances)
+        type(self)._max_levels = max(type(self)._max_levels, self.count_id)
+        type(self)._instances.add(self)
+
     def __repr__(self):
         fraction = self.progress / self.total
         complete = STD_FILL * int(fraction * self.text_width)
@@ -73,9 +112,17 @@ class ConfigurableProgressBar(ProgressBar):
             timings = next(self.exec_time)
             self.time_stats = timings + (timings[1] / (progress+1),)
 
+    def __iter__(self):
+        self.moveup = 0
+        super().__iter__() # also initializes display area for progressbar
+        self.iterator = iter(self.iterable)
+        return self
+
     def __next__(self):
         """Returns current value and time; increments display by one."""
         self._check_time()
+        self.moveup = 1 + self._depth
+        type(self)._depth = 1
         try:
             super().__next__() # updates display as well
         except StopIteration as e:
@@ -83,7 +130,11 @@ class ConfigurableProgressBar(ProgressBar):
                 # handle incompatible iterator length
                 print('Input sequence is not exhausted.')
             raise e
+        type(self)._depth = 0
         return next(self.iterator)
+
+
+patch_progressbar_display(ConfigurableProgressBar)
 
 
 class InteractiveRange(ConfigurableProgressBar):
