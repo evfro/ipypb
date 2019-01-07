@@ -90,7 +90,7 @@ class InteractiveRange(ConfigurableProgressBar):
             low = 0
 
         if low >= high:
-            raise InteractiveRangeInputError("`low` shold be lower than `high`")
+            raise InteractiveRangeInputError("`low` should be lower than `high`")
 
         iterable = range(*takewhile(lambda x: x is not None, [low, high, step]))
         super().__init__(iterable=iterable, total=None, keep=keep, text=text)
