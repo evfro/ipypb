@@ -3,6 +3,9 @@ from operator import length_hint
 from timeit import default_timer as timer
 from IPython.display import ProgressBar
 
+
+STD_FILL = '█'
+
 PBFORMAT = ['<progress style=width:"{width}" max="{total}" value="{value}" class="Progress-main"/></progress>',
             '<span class="Progress-label"><strong>{complete:.0f}%</strong></span>',
             '<span class="Iteration-label">{step}/{total}</span>',
@@ -40,6 +43,10 @@ class ConfigurableProgressBar(ProgressBar):
         self.time_stats = (0,)*3 # iter. time, total time, time per iter.
         self.exec_time = None
         self.pbformat = PBFORMAT
+    def __repr__(self):
+        fraction = self.progress / self.total
+        complete = STD_FILL * int(fraction * self.text_width)
+        return f'[{complete:<{self.text_width}}] {self.progress}/{self.total}'
 
     def bar_html(self):
         return "\n".join(self.pbformat)
