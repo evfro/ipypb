@@ -211,4 +211,4 @@ class InteractiveRange(ConfigurableProgressBar):
             raise InteractiveRangeInputError("`low` should be lower than `high`")
 
         iterable = range(*takewhile(lambda x: x is not None, [low, high, step]))
-        super().__init__(iterable=iterable, total=None, keep=keep, text=text)
+        super().__init__(iterable=iterable, total=None, keep=keep, label=label)
