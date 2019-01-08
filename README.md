@@ -9,9 +9,9 @@ Currently at pre-alpha stage.
 Simple usage example:  
 ```python
 from time import sleep
-from showprogress import showprogress
+from showprogress import track
 
-for i in showprogress(range(10)):
+for i in track(range(10)):
     sleep(0.1)
 ```
 
