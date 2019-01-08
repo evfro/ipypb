@@ -1,16 +1,21 @@
-import os
-from setuptools import setup
+import setuptools
 
-_packages = ["ipypb"]
+with open("README.md", "r") as fh:
+    long_description = fh.read()
 
-opts = dict(name="ipypb",
-            description="Native Interactive Progress Bar",
-            keywords = "progressbar",
-            version = "0.1.0",
-            license="MIT",
-            author="Evgeny Frolov",
-            platforms=["any"],
-            packages=_packages)
-
-if __name__ == '__main__':
-    setup(**opts)
+setuptools.setup(
+    name="ipypb",
+    version="0.5.0",
+    author="Evgeny Frolov",
+    description="Interactive ProgressBar natively built with IPython",
+    keywords="progressbar",
+    long_description=long_description,
+    long_description_content_type="text/markdown",
+    packages=setuptools.find_packages(),
+    platforms=["any"],
+    classifiers=[
+        "Programming Language :: Python :: 3",
+        "License :: OSI Approved :: MIT License",
+        "Operating System :: OS Independent",
+    ],
+)
