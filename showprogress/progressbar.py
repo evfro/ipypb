@@ -6,7 +6,7 @@ from IPython.display import ProgressBar
 from IPython.core.interactiveshell import InteractiveShell
 
 
-STD_FILL = '█'
+std_fill = '█'
 
 max_label_width_html = '10ex'
 max_label_width_text = 10
