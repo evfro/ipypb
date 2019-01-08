@@ -8,10 +8,28 @@ from IPython.core.interactiveshell import InteractiveShell
 
 STD_FILL = '█'
 
-PBFORMAT = ['<progress style=width:"{width}" max="{total}" value="{value}" class="Progress-main"/></progress>',
-            '<span class="Progress-label"><strong>{complete:.0f}%</strong></span>',
-            '<span class="Iteration-label">{step}/{total}</span>',
-            '<span class="Time-label">[{time[0]:.2f}<{time[1]:.2f}, {time[2]:.2f}s/it]</span>']
+max_label_width_html = '10ex'
+max_label_width_text = 10
+
+label_styles = {'display':'inline-block',
+                'overflow':'hidden',
+                'white-space':'nowrap',
+                'text-overflow':'ellipsis',
+                'min-width':'{min_label_width}',
+                'max-width':max_label_width_html,
+                'vertical-align':'middle',
+                'text-align':'right'}
+label_style_html = '; '.join([f'{k}:{v}' for k, v in label_styles.items()])
+
+pb_html_format = [
+  f'<span class="Text-label" style="{label_style_html}">{{label}}</span>',
+  '<progress style="width:{width}" max="{total}" value="{value}" class="Progress-main"/></progress>',
+  '<span class="Progress-label"><strong>{complete:.0f}%</strong></span>',
+  '<span class="Iteration-label">{step}/{total}</span>',
+  '<span class="Time-label">[{time[0]:.2f}<{time[1]:.2f}, {time[2]:.2f}s/it]</span>',
+]
+
+pb_text_format = f'{{label:<{{min_label_width}}.{max_label_width_text}}}{{complete:<{{width}}}} {{step}}/{{total}}'
 
 
 def progressbar_formatter(obj, p, cycle):
@@ -75,20 +93,39 @@ class ConfigurableProgressBar(ProgressBar):
         self.step_progress = 0
         self.time_stats = (0,)*3 # iter. time, total time, time per iter.
         self.exec_time = None
-        self.pbformat = PBFORMAT
         self.carriage_moveup = 0
+        self.label = label or ''
+
+        self.pbformat_html = pb_html_format
+        self.pbformat_text = pb_text_format
+        self.min_label_width_text = 0
+        self.min_label_width_html = 0
+        if self.label:
+            self.text_width = self.text_width - max_label_width_text
+            self.html_width = f'{(int(self.html_width[:-2]) - int(max_label_width_html[:-2]))}ex'
+            self.min_label_width_text = max_label_width_text
+            self.min_label_width_html = max_label_width_html
 
         self.count_id = len(type(self)._instances)
         type(self)._max_levels = max(type(self)._max_levels, self.count_id)
         type(self)._instances.add(self)
 
+    def bar_text(self):
+        return self.pbformat_text
+
     def __repr__(self):
         fraction = self.progress / self.total
-        complete = STD_FILL * int(fraction * self.text_width)
-        return f'[{complete:<{self.text_width}}] {self.progress}/{self.total}'
+        complete = std_fill * int(fraction * self.text_width)
+        config = dict(label=self.label,
+                      complete=complete,
+                      width=self.text_width,
+                      step=self.progress,
+                      total=self.total,
+                      min_label_width=self.min_label_width_text)
+        return self.bar_text().format(**config)
 
     def bar_html(self):
-        return "\n".join(self.pbformat)
+        return "\n".join(self.pbformat_html)
 
     def _repr_html_(self):
         perc_complete = 100 * (self.progress/self.total)
@@ -100,12 +137,14 @@ class ConfigurableProgressBar(ProgressBar):
                       value=self.progress,
                       complete=perc_complete,
                       step=self.step_progress,
-                      time=self.time_stats)
+                      time=self.time_stats,
+                      label=self.label,
+                      min_label_width=self.min_label_width_html)
         return f'<div>{self.bar_html()}</div>'.format(**config)
 
     def _check_time(self):
         progress = self._progress
-        if progress == -1:
+        if progress == -1: # has just been initialized with __iter__ method
             self.exec_time = exec_time()
             self.exec_time.send(None) # prime timer
         else:
@@ -138,7 +177,7 @@ patch_progressbar_display(ConfigurableProgressBar)
 
 
 class InteractiveRange(ConfigurableProgressBar):
-    def __init__(self, low, high=None, step=None, keep=True, text=None):
+    def __init__(self, low, high=None, step=None, keep=True, label=None):
         if not isinstance(low, int):
             raise InteractiveRangeInputError("Input must be an integer value")
 
