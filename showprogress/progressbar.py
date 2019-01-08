@@ -1,12 +1,14 @@
 from itertools import takewhile
 from weakref import WeakSet
 from operator import length_hint
+from datetime import timedelta, datetime
 from timeit import default_timer as timer
 from IPython.display import ProgressBar
 from IPython.core.interactiveshell import InteractiveShell
 
 
 std_fill = '█'
+std_rest = '#'
 
 max_label_width_html = '10ex'
 max_label_width_text = 10
@@ -26,10 +28,13 @@ pb_html_format = [
   '<progress style="width:{width}" max="{total}" value="{value}" class="Progress-main"/></progress>',
   '<span class="Progress-label"><strong>{complete:.0f}%</strong></span>',
   '<span class="Iteration-label">{step}/{total}</span>',
-  '<span class="Time-label">[{time[0]:.2f}<{time[1]:.2f}, {time[2]:.2f}s/it]</span>',
+  '<span class="Time-label">[{time[0]}<{time[1]}, {time[2]:.2f}s/it]</span>',
 ]
 
-pb_text_format = f'{{label:<{{min_label_width}}.{max_label_width_text}}}{{complete:<{{width}}}} {{step}}/{{total}}'
+pb_text_format = [f'{{label:>{{min_label_width}}.{max_label_width_text}}}',
+                  f'[{{complete:{std_rest}<{{width}}}}]',
+                  '{step}/{total}',
+                  '[{time[0]}<{time[1]}, {time[2]:.2f}s/it]']
 
 
 def progressbar_formatter(obj, p, cycle):
@@ -62,8 +67,21 @@ def exec_time():
     yield
     while True:
         stop = timer()
-        yield (stop-start, stop-start0)
+        yield (stop-start0, stop-start)
         start = stop
+
+
+def format_time(t):
+    delta = timedelta(seconds=t)
+    time = datetime.utcfromtimestamp(delta.total_seconds())
+
+    hours = time.hour + delta.days * 24
+    minutes = time.minute
+    seconds = time.second + round(time.microsecond * 1e-6)
+    strtime = '{0:>02}:{1:>02}'.format(minutes, seconds)
+    if hours:
+        strtime = f'{hours:>02}:{strtime}'
+    return strtime
 
 
 class ProgressBarInputError(ValueError):
@@ -111,7 +129,7 @@ class ConfigurableProgressBar(ProgressBar):
         type(self)._instances.add(self)
 
     def bar_text(self):
-        return self.pbformat_text
+        return ' '.join(self.pbformat_text)
 
     def __repr__(self):
         fraction = self.progress / self.total
@@ -120,12 +138,13 @@ class ConfigurableProgressBar(ProgressBar):
                       complete=complete,
                       width=self.text_width,
                       step=self.progress,
+                      time=self.time_stats,
                       total=self.total,
                       min_label_width=self.min_label_width_text)
         return self.bar_text().format(**config)
 
     def bar_html(self):
-        return "\n".join(self.pbformat_html)
+        return '\n'.join(self.pbformat_html)
 
     def _repr_html_(self):
         perc_complete = 100 * (self.progress/self.total)
@@ -149,7 +168,8 @@ class ConfigurableProgressBar(ProgressBar):
             self.exec_time.send(None) # prime timer
         else:
             timings = next(self.exec_time)
-            self.time_stats = timings + (timings[1] / (progress+1),)
+            strtime = tuple([format_time(t) for t in timings])
+            self.time_stats = strtime + (timings[1] / (progress+1),)
 
     def __iter__(self):
         self.carriage_moveup = 0 # allow end='\n' in print function
