@@ -24,7 +24,7 @@ def progressbar_formatter(obj, p, cycle):
         to_last_line = ''
         if (obj.count_id == 0) and (obj._progress == obj.total):
             to_last_line = '\033[B' * type(obj)._max_levels
-        moveup = '\033[A' * obj.moveup
+        moveup = '\033[A' * obj.carriage_moveup
         begin = '\033[2K\r'  # overwrite line, start from the beginning
         p.text(f'{moveup}{begin}{repr(obj)}{to_last_line}')
 
@@ -76,7 +76,7 @@ class ConfigurableProgressBar(ProgressBar):
         self.time_stats = (0,)*3 # iter. time, total time, time per iter.
         self.exec_time = None
         self.pbformat = PBFORMAT
-        self.moveup = 0
+        self.carriage_moveup = 0
 
         self.count_id = len(type(self)._instances)
         type(self)._max_levels = max(type(self)._max_levels, self.count_id)
@@ -113,7 +113,7 @@ class ConfigurableProgressBar(ProgressBar):
             self.time_stats = timings + (timings[1] / (progress+1),)
 
     def __iter__(self):
-        self.moveup = 0
+        self.carriage_moveup = 0 # allow end='\n' in print function
         super().__iter__() # also initializes display area for progressbar
         self.iterator = iter(self.iterable)
         return self
@@ -121,7 +121,7 @@ class ConfigurableProgressBar(ProgressBar):
     def __next__(self):
         """Returns current value and time; increments display by one."""
         self._check_time()
-        self.moveup = 1 + self._depth
+        self.carriage_moveup = 1 + self._depth # move up this amount of lines
         type(self)._depth = 1
         try:
             super().__next__() # updates display as well
