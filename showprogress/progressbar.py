@@ -62,6 +62,20 @@ def patch_progressbar_display(cls):
         pass
 
 
+def progressbar_factory(*args, **kwargs):
+    # tqdm compatibility
+    desc = kwargs.pop('desc', None)
+    leave = kwargs.pop('leave', None)
+    if desc is not None:
+        kwargs['label'] = desc
+    if leave is not None:
+        kwargs['keep'] = leave
+
+    if isinstance(args[0], int):
+        return InteractiveRange(*args, **kwargs)
+    return ConfigurableProgressBar(*args, **kwargs)
+
+
 def exec_time():
     start0 = start = timer()
     yield
