@@ -1,10 +1,10 @@
 import os
 from setuptools import setup
 
-_packages = ["showprogress"]
+_packages = ["ipypb"]
 
-opts = dict(name="showprogress",
-            description="Native Progress Bar",
+opts = dict(name="ipypb",
+            description="Native Interactive Progress Bar",
             keywords = "progressbar",
             version = "0.1.0",
             license="MIT",

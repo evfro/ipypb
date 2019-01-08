@@ -1,2 +1,3 @@
 .ipynb_checkpoints/
-showprogress/__pycache__/
+ipypb/__pycache__/
+ipypb.egg-info/
