@@ -36,7 +36,7 @@ tqdm = ipb
 It will automatically process keyword arguments to ensure compatibility with `tqdm`'s API. Note, that `ipb` offers a common interface for both notebook and terminal environments.
 
 # Install
-`pip install ipypb`
+`pip install --upgrade ipypb`
 
 # Requirements
 Python 3.6+ and IPython v.5.6+ excluding v.6.1 and v.6.2
