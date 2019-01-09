@@ -183,7 +183,7 @@ class ConfigurableProgressBar(ProgressBar):
         else:
             timings = next(self.exec_time)
             strtime = tuple([format_time(t) for t in timings])
-            self.time_stats = strtime + (timings[1] / (progress+1),)
+            self.time_stats = strtime + (timings[0] / (progress+1),)
 
     def __iter__(self):
         self.carriage_moveup = 0 # allow end='\n' in print function
