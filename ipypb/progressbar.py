@@ -86,16 +86,13 @@ def exec_time():
         start = stop
 
 
-def format_time(t):
-    delta = timedelta(seconds=t)
-    time = datetime.utcfromtimestamp(delta.total_seconds())
+def format_elapsed_time(seconds_total):
+    minutes, seconds = divmod(seconds_total, 60)
+    hours, minutes = divmod(minutes, 60)
 
-    hours = time.hour + delta.days * 24
-    minutes = time.minute
-    seconds = time.second + round(time.microsecond * 1e-6)
-    strtime = '{0:>02}:{1:>02}'.format(minutes, seconds)
+    strtime = '{0:>02.0f}:{1:>02.0f}'.format(minutes, seconds)
     if hours:
-        strtime = f'{hours:>02}:{strtime}'
+        strtime = f'{hours:>02.0f}:{strtime}'
     return strtime
 
 
@@ -183,7 +180,7 @@ class ConfigurableProgressBar(ProgressBar):
             self.exec_time.send(None) # prime timer
         else:
             timings = next(self.exec_time)
-            strtime = tuple([format_time(t) for t in timings])
+            strtime = tuple([format_elapsed_time(t) for t in timings])
             self.time_stats = strtime + (timings[0] / (progress+1),)
 
     def __iter__(self):
