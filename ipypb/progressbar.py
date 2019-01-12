@@ -53,13 +53,13 @@ def progressbar_formatter(obj, p, cycle):
         p.text(f'{moveup}{begin}{repr(obj)}{to_last_line}')
 
 
-def patch_progressbar_display(cls):
+def register_text_format(cls):
     interactive = InteractiveShell.initialized()
     if interactive: # for ipython terminal
-        frm = InteractiveShell.instance().display_formatter.formatters['text/plain']
-        frm.for_type(cls, progressbar_formatter) # doesn't affect notebooks
+        text_format = InteractiveShell.instance().display_formatter.formatters['text/plain']
+        text_format.for_type(cls, progressbar_formatter) # doesn't affect notebooks
     else: # for pure python in terminal
-        # TODO find a way to patch without invoking ipython instance
+        # TODO patch without invoking ipython instance
         pass
 
 
@@ -77,7 +77,7 @@ def progressbar_factory(*args, **kwargs):
     return ConfigurableProgressBar(*args, **kwargs)
 
 
-def exec_time():
+def stopwatch():
     start0 = start = timer()
     yield
     while True:
@@ -176,7 +176,7 @@ class ConfigurableProgressBar(ProgressBar):
     def _check_time(self):
         progress = self._progress
         if progress == -1: # has just been initialized with __iter__ method
-            self.exec_time = exec_time()
+            self.exec_time = stopwatch()
             self.exec_time.send(None) # prime timer
         else:
             timings = next(self.exec_time)
@@ -205,7 +205,7 @@ class ConfigurableProgressBar(ProgressBar):
         return next(self.iterator)
 
 
-patch_progressbar_display(ConfigurableProgressBar)
+register_text_format(ConfigurableProgressBar)
 
 
 class InteractiveRange(ConfigurableProgressBar):
