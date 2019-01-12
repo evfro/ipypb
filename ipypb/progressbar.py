@@ -10,8 +10,8 @@ from IPython.core.interactiveshell import InteractiveShell
 std_fill = '█'
 std_rest = '#'
 
-max_label_width_html = '10ex'
-max_label_width_text = 10
+max_label_width_html = '15ex'
+max_label_width_text = 15
 
 # handle overlapping labels nicely via CSS
 label_styles = {'display':'inline-block',
