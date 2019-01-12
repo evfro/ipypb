@@ -1,7 +1,6 @@
 from itertools import takewhile
 from weakref import WeakSet
 from operator import length_hint
-from datetime import timedelta, datetime
 from timeit import default_timer as timer
 from IPython.display import ProgressBar
 from IPython.core.interactiveshell import InteractiveShell
