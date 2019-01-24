@@ -124,6 +124,8 @@ class ConfigurableProgressBar(ProgressBar):
         self.exec_time = None
         self.carriage_moveup = 0
         self.label = label or ''
+        self.last_updated = None
+        self.update_interval = 0.1
 
         self.pbformat_html = pb_html_format
         self.pbformat_text = pb_text_format
@@ -185,6 +187,7 @@ class ConfigurableProgressBar(ProgressBar):
     def __iter__(self):
         self.carriage_moveup = 0 # allow end='\n' in print function
         super().__iter__() # also initializes display area for progressbar
+        self.last_updated = timer()
         self.iterator = iter(self.iterable)
         return self
 
@@ -202,6 +205,13 @@ class ConfigurableProgressBar(ProgressBar):
             raise e
         type(self)._depth = 0
         return next(self.iterator)
+
+    def update(self, *args, **kwargs):
+        time_delta = timer() - self.last_updated
+        # control refresh rate
+        if (time_delta >= self.update_interval) or (self._progress == self.total):
+            super().update(*args, **kwargs)
+            self.last_updated = timer()
 
 
 register_text_format(ConfigurableProgressBar)
