@@ -107,7 +107,7 @@ class ConfigurableProgressBar(ProgressBar):
     _depth = 0
     _max_levels = 0
 
-    def __init__(self, iterable=None, total=0, keep=True, label=None):
+    def __init__(self, iterable=None, total=0, keep=True, cycle=False, label=None):
         size = total or length_hint(iterable)
         if size == 0: # unable to determine input sequence length
             raise ProgressBarInputError('Please specify the total number of iterations')
@@ -118,6 +118,7 @@ class ConfigurableProgressBar(ProgressBar):
 
         self.iterable = range(size) if iterable is None else iterable
         self.iterator = None
+        self.cycle = cycle
         self.step = (size // 100) or 1
         self.step_progress = 0
         self.time_stats = (0,)*3 # iter. time, total time, time per iter.
@@ -185,6 +186,11 @@ class ConfigurableProgressBar(ProgressBar):
             self.time_stats = strtime + (timings[0] / (progress+1),)
 
     def __iter__(self):
+        if self.cycle and (self.iterator is not None):
+            self._progress = -1
+            type(self)._depth = 0
+            self.iterator = iter(self.iterable)
+            return self
         self.carriage_moveup = 0 # allow end='\n' in print function
         super().__iter__() # also initializes display area for progressbar
         self.last_updated = timer()
