@@ -111,11 +111,11 @@ class ConfigurableProgressBar(ProgressBar):
     _max_levels = 0
 
     def __init__(self, iterable=None, total=0, keep=True, cycle=False, label=None):
+        if not isinstance(total, int) or (total < 0):
+            raise ProgressBarInputError('The total number of iterations must be an integer value above 0')
         size = total or length_hint(iterable)
         if size == 0: # unable to determine input sequence length
             raise ProgressBarInputError('Please specify the total number of iterations')
-        if (size < 0) or not isinstance(size, int):
-            raise ProgressBarInputError('The total number of iterations must be an integer value above 0')
 
         super().__init__(size)
 
