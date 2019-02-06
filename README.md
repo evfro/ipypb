@@ -3,7 +3,11 @@ Python progress bar that uses native ipython functionality. Widget-free. Works e
 
 The reason for creating this package is that other progress bars use custom bar objects and/or widget tools, ignoring the builtin `IPython` functionality. This makes them unusable in "clean" environments like JupyterLab. In contrast, `ipypb` can run even in very restricted environments.
 
-Another useful feature of `ipypb` is that the progress bar information is available even after closing a notebook and killing its ipython kernel. Once you launch this notebook again, you'll see the same progress bar information as before closing instead of widjet-related erorrs like `Failed to display Jupyter Widget of type HBox`. Just look at this [NBViewer example](https://nbviewer.jupyter.org/github/evfro/ipypb/blob/master/examples/Usage%20examples.ipynb).
+Another useful feature of `ipypb` is that the progress bar information is available even after closing a notebook and killing its ipython kernel. Once you launch this notebook again, you'll see the same progress bar information as before closing instead of widjet-related erorrs like `Failed to display Jupyter Widget of type HBox`, as shown below:
+
+![image](https://user-images.githubusercontent.com/5283394/52340853-f1c4ba80-2a21-11e9-93a5-ce29fab41991.png)
+
+Also look at this [NBViewer example](https://nbviewer.jupyter.org/github/evfro/ipypb/blob/master/examples/Usage%20examples.ipynb).
 
 # Notes
 Currently at beta stage.
