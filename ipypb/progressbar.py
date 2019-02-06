@@ -1,6 +1,9 @@
-from itertools import takewhile
+from functools import reduce, partial
+from itertools import takewhile, product, chain
+from operator import length_hint, mul
+from collections import defaultdict
+from bisect import bisect_left
 from weakref import WeakSet
-from operator import length_hint
 from timeit import default_timer as timer
 from IPython.display import ProgressBar
 from IPython.core.interactiveshell import InteractiveShell
@@ -189,11 +192,10 @@ class ConfigurableProgressBar(ProgressBar):
         if self.cycle and (self.iterator is not None):
             self._progress = -1
             type(self)._depth = 0
-            self.iterator = iter(self.iterable)
-            return self
-        self.carriage_moveup = 0 # allow end='\n' in print function
-        super().__iter__() # also initializes display area for progressbar
-        self.last_updated = timer()
+        else:
+            self.carriage_moveup = 0 # allow end='\n' in print function
+            super().__iter__() # also initializes display area for progressbar
+            self.last_updated = timer()
         self.iterator = iter(self.iterable)
         return self
 
@@ -238,4 +240,173 @@ class InteractiveRange(ConfigurableProgressBar):
             raise InteractiveRangeInputError("`low` should be lower than `high`")
 
         iterable = range(*takewhile(lambda x: x is not None, [low, high, step]))
-        super().__init__(iterable=iterable, total=None, keep=keep, label=label)
+        super().__init__(iterable=iterable, keep=keep, label=label)
+
+
+def flatten_dict(schema, parent_key=None, grand_keys=None):
+    items = []
+    for k, v in schema.items():
+        if isinstance(v, dict):
+            grand_keys = grand_keys + [parent_key] if parent_key is not None else []
+            items.extend(flatten_dict(v, k, grand_keys))
+        else:
+            prev_keys = tuple(grand_keys) if grand_keys is not None else ()
+            prev_keys = prev_keys + (parent_key,) if parent_key is not None else ()
+            items.append(prev_keys + (k, v))
+    return items
+
+def enumerate_keys_sorted(d):
+    return dict(zip(sorted(d.keys()),
+                    range(len(d))))
+
+def calculate_joint_size(iterables):
+    return reduce(mul, [len(itr) for itr in iterables], 1)
+
+class IterChainTree(dict):
+    '''Autovivification process for tree generation'''
+    def __init__(self, level, iter_factory, *, parent=None, path=()):
+        super().__init__()
+        self.parent = parent
+        self.path = path
+        self.level = level
+        self.iter_factory = iter_factory
+
+    def __getitem__(self, key):
+        if key == self.level: # handle head iter
+            return self # assumed to be already initialized
+        return super().__getitem__(key)
+
+    def __missing__(self, key):
+        label = key[0]
+        path = self.path
+        if path: # initialize parent iter (if not head)
+            self.iter_factory(path, label)
+        next_path = path + (label, len(self))
+        iter_chain = self[key] = type(self)(key, self.iter_factory,
+                                            parent=self, path=next_path)
+        return iter_chain
+
+    def traverse(self, keys, loc=0):
+        return self[keys[loc]].traverse(keys, loc+1) if loc < len(keys) else self
+
+
+class ConfigurableProgressChain(ConfigurableProgressBar):
+    def __init__(self, schema, data, *args, transform=None, labels=None, **kwargs):
+        self.chain_data = data
+        iterable = kwargs.get('iterable', None)
+        total = kwargs.get('total', None)
+        if iterable is None and total is None:
+            iterables = self.chain_data.values()
+            kwargs['iterable'] = product(*iterables)
+            kwargs['total'] = calculate_joint_size(iterables)
+
+        super().__init__(*args, **kwargs)
+
+        self.label = 'overall'
+        self.transform = transform
+        self.schema = schema
+        self.iter_order = flatten_dict(schema)
+        self.iter_index = enumerate_keys_sorted(data)
+        self.iter_total = {k: len(v) for k, v in data.items()}
+        self.iter_label = labels
+        self.iter_trees = None
+        self.iter_proxy = None
+        self.iter_stage = None
+        self.iter_queue = None
+        self.display_array = None
+
+    def __iter__(self):
+        self.display_array = []
+        self.iter_queue = []
+        self.iter_stage = set()
+        self.iter_proxy = defaultdict(dict) # {line: {path: bar}}
+        self.iter_trees = {line: IterChainTree(labels[0],
+                                               partial(self.iter_factory,
+                                                       self.iter_proxy[line]))
+                           for line, labels in enumerate(self.iter_order)}
+        super().__iter__()
+        self.chain_iter()
+        return self
+
+    def iter_factory(self, proxy, path, label):
+        try:
+            proxy[path]
+        except KeyError:
+            proxy[path] = prog_bar = self.iter_init(label, path)
+            self.ensure_display_order(proxy, path)
+            # on next iter may loose control due to new param group -> callback
+            self.delayed_progress(prog_bar)
+
+    def iter_init(self, label, path):
+        try:
+            display_label = self.iter_label[label]
+        except: # sholdn't break on display issues
+            display_label = label
+        if len(path)>1:
+            level = path[-1]
+            display_label = f'{display_label}:{level}'
+        return iter(InteractiveRange(self.iter_total[label], label=display_label))
+
+    def ensure_display_order(self, proxy, path):
+        if not isinstance(path, tuple): # leave head untouched
+            return
+        displays = self.display_array
+        displays.append(proxy[path]._display_id)
+        queue = self.iter_queue
+        loc = bisect_left(queue, path) # fast
+        if loc < len(queue): # shift displays
+            proxy[path]._display_id = displays[loc]
+            queue.insert(loc, path) # slow
+            for i in range(loc+1, len(displays)):
+                prog_bar = proxy[queue[i]]
+                prog_bar._display_id = displays[i]
+                self.iter_stage.add(prog_bar)
+        else:
+            queue.append(path)
+
+    def delayed_progress(self, prog_bar):
+        prog_bar._progress += 1
+        self.iter_stage.add(prog_bar)
+
+    def chain_iter(self):
+        for line, labels in enumerate(self.iter_order):
+            iter_proxy = self.iter_proxy[line]
+            keys = self.generate_keys(labels, [0]*len(labels))
+            for loc, label in enumerate(labels):
+                key_path = tuple(chain(*keys[:loc])) if (loc > 0) else label
+                self.iter_factory(iter_proxy, key_path, label)
+
+    def generate_keys(self, labels, params):
+        keys = (params[self.iter_index[label]] for label in labels)
+        return tuple(zip(labels, keys))
+
+    def __next__(self):
+        self.update_staged()
+        params = super().__next__()
+        if self.transform is not None:
+            params = self.transform(params)
+        self.chain_next(params)
+        return params
+
+    def update_staged(self):
+        try:
+            for prog_bar in self.iter_stage:
+                prog_bar.update()
+        finally:
+            self.iter_stage.clear()
+
+    def chain_next(self, params):
+        for line, labels in enumerate(self.iter_order):
+            keys = self.generate_keys(labels, params)
+            iter_child = self.iter_trees[line].traverse(keys)
+            iter_proxy = self.iter_proxy[line]
+            self.iter_next(iter_proxy, iter_child.parent)
+
+    def iter_next(self, proxy, tree):
+        if tree is None: # return control to main loop
+            return
+        path = tree.path or tree.level
+        prog_bar = proxy[path]
+        self.delayed_progress(prog_bar)
+        if prog_bar._progress == prog_bar.total: # a la StopIteration
+            self.iter_next(proxy, tree.parent)
