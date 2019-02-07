@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="ipypb",
-    version="0.5.1",
+    version="0.5.2",
     author="Evgeny Frolov",
     description="Interactive ProgressBar natively built with IPython",
     keywords="progressbar",
